@@ -18,5 +18,11 @@ func router(s *Server) http.Handler {
 	r.Handle("/api/v1/{start}/{stop}/fragments/{id}/logs/trend", fn.Wrap(s.trend)).Methods("GET")
 	r.Handle("/api/v1/{start}/{stop}/fragments/{fid}/events/{eid}/fields/{field}/logs/trend", fn.Wrap(s.fieldTrend)).Methods("GET")
 
-	return r
+	return httpCORSMiddleware(r)
+}
+
+func httpCORSMiddleware(h http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Access-Control-Allow-Origin", "*")
+	})
 }
