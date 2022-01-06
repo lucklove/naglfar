@@ -6,7 +6,7 @@ import (
 
 func Command() *cobra.Command {
 	cmd := &cobra.Command{
-		Use: `naglfar`,
+		Use: `naglfar <command> [flags]`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			return cmd.Help()
 		},

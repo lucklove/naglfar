@@ -8,7 +8,7 @@ import (
 func newServerCommand() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "server",
-		Short: "naglfar server",
+		Short: "bootstrap server",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			s := server.New()
 

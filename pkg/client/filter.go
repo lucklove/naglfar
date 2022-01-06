@@ -13,7 +13,7 @@ func buildEventFilter(events []string) string {
 	if len(xs) == 0 {
 		return ""
 	}
-	return fmt.Sprintf(`|> filter(fn: (r) => %s)`, strings.Join(xs, "or"))
+	return fmt.Sprintf(`|> filter(fn: (r) => %s)`, strings.Join(xs, " or "))
 }
 
 func buildFieldFilter(filters []string) string {

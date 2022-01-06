@@ -7,8 +7,8 @@ import (
 
 func newDeleteCommand() *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "delete",
-		Short: "naglfar delete <fragment>",
+		Use:   "delete <fragment>",
+		Short: "delete a fragment",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if len(args) != 1 {
 				return cmd.Help()

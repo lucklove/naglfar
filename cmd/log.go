@@ -9,16 +9,19 @@ import (
 	"github.com/lucklove/naglfar/pkg/client"
 	"github.com/lucklove/tidb-log-parser/event"
 	"github.com/lucklove/tidb-log-parser/parser"
+	du "github.com/pingcap/diag/pkg/utils"
 	"github.com/pingcap/tiup/pkg/tui"
 	"github.com/spf13/cobra"
 )
 
 func newLogCommand() *cobra.Command {
 	filters := []string{}
+	begin := ""
+	end := ""
 
 	cmd := &cobra.Command{
-		Use:   "log",
-		Short: "naglfar log <fragment> [events]",
+		Use:   "log <fragment> [events]",
+		Short: "get log detail of specified fragment",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if len(args) < 1 {
 				return cmd.Help()
@@ -27,11 +30,22 @@ func newLogCommand() *cobra.Command {
 			c := client.New()
 			defer c.Close()
 
-			now := time.Now()
-			logs, err := c.GetLog(cmd.Context(), args[0], now.Add(-time.Hour*24*30), now, filters, args[1:]...)
+			start, err := du.ParseTime(begin)
+			if err != nil {
+				start = time.Now().Add(-time.Hour * 24 * 30)
+			}
+			stop, err := du.ParseTime(end)
+			if err != nil {
+				stop = time.Now()
+			}
+
+			logs, err := c.GetLog(cmd.Context(), args[0], start, stop, filters, args[1:]...)
 			if err != nil {
 				return err
 			}
+			sort.Slice(logs, func(i, j int) bool {
+				return logs[i].Header.DateTime.Before(logs[j].Header.DateTime)
+			})
 
 			em, err := event.NewEventManager(event.ComponentTiDB)
 			if err != nil {
@@ -55,6 +69,8 @@ func newLogCommand() *cobra.Command {
 	}
 
 	cmd.Flags().StringSliceVarP(&filters, "filter", "f", nil, "filter fields values")
+	cmd.Flags().StringVarP(&begin, "begin", "b", begin, "specific begin time")
+	cmd.Flags().StringVarP(&end, "end", "e", end, "specific end time")
 
 	return cmd
 }

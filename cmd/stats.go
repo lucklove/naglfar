@@ -14,16 +14,19 @@ import (
 	"github.com/lucklove/tidb-log-parser/event"
 	"github.com/lucklove/tidb-log-parser/store"
 	"github.com/lucklove/tidb-log-parser/utils"
+	du "github.com/pingcap/diag/pkg/utils"
 	"github.com/pingcap/tiup/pkg/tui"
 	"github.com/spf13/cobra"
 )
 
 func newFieldStatsCommand() *cobra.Command {
 	filters := []string{}
+	begin := ""
+	end := ""
 
 	cmd := &cobra.Command{
-		Use:   "fstats",
-		Short: "naglfar stats <fragment> <event> <field>",
+		Use:   "fstats <fragment> <log-id> <field>",
+		Short: "get stats of event fields distribution",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if len(args) != 3 {
 				return cmd.Help()
@@ -32,8 +35,16 @@ func newFieldStatsCommand() *cobra.Command {
 			c := client.New()
 			defer c.Close()
 
-			n := time.Now()
-			fmap, err := c.GetFieldStats(cmd.Context(), args[0], n.Add(-time.Hour*24*30), n, filters, args[1], args[2])
+			start, err := du.ParseTime(begin)
+			if err != nil {
+				start = time.Now().Add(-time.Hour * 24 * 30)
+			}
+			stop, err := du.ParseTime(end)
+			if err != nil {
+				stop = time.Now()
+			}
+
+			fmap, err := c.GetFieldStats(cmd.Context(), args[0], start, stop, filters, args[1], args[2])
 			if err != nil {
 				return err
 			}
@@ -49,6 +60,8 @@ func newFieldStatsCommand() *cobra.Command {
 	}
 
 	cmd.Flags().StringSliceVarP(&filters, "filter", "f", nil, "filter fields values")
+	cmd.Flags().StringVarP(&begin, "begin", "b", begin, "specific begin time")
+	cmd.Flags().StringVarP(&end, "end", "e", end, "specific end time")
 
 	return cmd
 }
@@ -56,10 +69,12 @@ func newFieldStatsCommand() *cobra.Command {
 func newStatsCommand() *cobra.Command {
 	withFields := false
 	filters := []string{}
+	begin := ""
+	end := ""
 
 	cmd := &cobra.Command{
-		Use:   "stats",
-		Short: "naglfar stats <fragment>",
+		Use:   "stats <fragment>",
+		Short: "get stats of log distribution",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if len(args) != 1 {
 				return cmd.Help()
@@ -68,15 +83,23 @@ func newStatsCommand() *cobra.Command {
 			c := client.New()
 			defer c.Close()
 
-			n := time.Now()
-			countMap, messageMap, err := c.GetStats(cmd.Context(), args[0], n.Add(-time.Hour*24*30), n)
+			start, err := du.ParseTime(begin)
+			if err != nil {
+				start = time.Now().Add(-time.Hour * 24 * 30)
+			}
+			stop, err := du.ParseTime(end)
+			if err != nil {
+				stop = time.Now()
+			}
+
+			countMap, messageMap, err := c.GetStats(cmd.Context(), args[0], start, stop)
 			if err != nil {
 				return err
 			}
 
 			stats := make(map[string]map[string]utils.StringSet)
 			if withFields {
-				logs, err := c.GetLog(cmd.Context(), args[0], n.Add(-time.Hour*24*30), n, filters, args[1:]...)
+				logs, err := c.GetLog(cmd.Context(), args[0], start, stop, filters, args[1:]...)
 				if err != nil {
 					return err
 				}
@@ -160,6 +183,8 @@ func newStatsCommand() *cobra.Command {
 
 	cmd.Flags().BoolVar(&withFields, "with-fields", false, "print fields stats")
 	cmd.Flags().StringSliceVarP(&filters, "filter", "f", nil, "filter fields values")
+	cmd.Flags().StringVarP(&begin, "begin", "b", begin, "specific begin time")
+	cmd.Flags().StringVarP(&end, "end", "e", end, "specific end time")
 
 	return cmd
 }

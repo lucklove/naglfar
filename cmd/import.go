@@ -17,8 +17,8 @@ func newImportCommand() *cobra.Command {
 	fragment := ""
 
 	cmd := &cobra.Command{
-		Use:   "import",
-		Short: "naglfar import <log-file> --as <fragment>",
+		Use:   "import <log-file> --as <fragment>",
+		Short: "import a fragment from plain text log file",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if len(args) != 1 {
 				return cmd.Help()

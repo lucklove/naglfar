@@ -10,7 +10,7 @@ import (
 func newListCommand() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "list",
-		Short: "naglfar list",
+		Short: "list imported fragment list",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			c := client.New()
 			defer c.Close()
