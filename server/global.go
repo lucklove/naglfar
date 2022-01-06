@@ -2,12 +2,11 @@ package server
 
 import (
 	"sync"
-	"time"
 )
 
 type TimeRange struct {
-	Start time.Time `json:"start"`
-	Stop  time.Time `json:"stop"`
+	Start int64 `json:"start"`
+	Stop  int64 `json:"stop"`
 }
 
 type ThresholdRange struct {
@@ -42,7 +41,7 @@ func (gs *GlobalStore) SetChangePoint(fragment, event string, r TimeRange) {
 		gs.ChangePoints[fragment] = make(map[string][]TimeRange)
 	}
 	for _, point := range gs.ChangePoints[fragment][event] {
-		if point.Start.Equal(r.Start) {
+		if point.Start == r.Start {
 			return
 		}
 	}

@@ -59,7 +59,7 @@ func (s *Server) changePoints(ctx context.Context, r *http.Request) ([]TimeRange
 
 	xs := []TimeRange{}
 	for _, x := range s.store.GetChangePoint(fragment, event) {
-		if x.Start.Before(start) || x.Stop.After(stop) {
+		if x.Start < start.Unix() || x.Stop > stop.Unix() {
 			continue
 		}
 		xs = append(xs, x)
@@ -107,8 +107,12 @@ func (s *Server) buildChangePoint(ctx context.Context) {
 			if _, err := fmt.Sscanf(scanner.Text(), "%d,%d,%d", &eid, &start, &stop); err != nil {
 				continue
 			}
-			s.store.SetChangePoint(frag, fmt.Sprintf("%d", eid), TimeRange{Start: time.Unix(start, 0), Stop: time.Unix(stop, 0)})
+			s.store.SetChangePoint(frag, fmt.Sprintf("%d", eid), TimeRange{Start: start, Stop: stop})
 		}
-		log.Info("build change point success", zap.String("fragment", frag))
+		if err := scanner.Err(); err != nil {
+			log.Error("scan error", zap.Error(err))
+		} else {
+			log.Info("build change point success", zap.String("fragment", frag))
+		}
 	}
 }
