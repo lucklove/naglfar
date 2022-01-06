@@ -9,11 +9,13 @@ import (
 type Server struct {
 	router http.Handler
 	client *client.Client
+	store  *GlobalStore
 }
 
 func New() *Server {
 	s := &Server{
 		client: client.New(),
+		store:  &GlobalStore{},
 	}
 	s.router = router(s)
 	return s

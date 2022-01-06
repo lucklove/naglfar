@@ -8,6 +8,9 @@ import (
 func buildEventFilter(events []string) string {
 	xs := []string{}
 	for _, event := range events {
+		if event == "" {
+			continue
+		}
 		xs = append(xs, fmt.Sprintf(`r["_measurement"] == "%s"`, event))
 	}
 	if len(xs) == 0 {
