@@ -17,6 +17,7 @@ func router(s *Server) http.Handler {
 	r.Handle("/api/v1/{start}/{stop}/fragments/{fid}/events/{eid}/logs", fn.Wrap(s.logs)).Methods("GET")
 	r.Handle("/api/v1/{start}/{stop}/fragments/{id}/logs/trend", fn.Wrap(s.trend)).Methods("GET")
 	r.Handle("/api/v1/{start}/{stop}/fragments/{fid}/events/{eid}/fields/{field}/logs/trend", fn.Wrap(s.fieldTrend)).Methods("GET")
+	r.Handle("/api/v1/{start}/{stop}/fragments/{fid}/events/{eid}/logs/changepoints", fn.Wrap(s.changePoints)).Methods("GET")
 
 	return httpCORSMiddleware(r)
 }
