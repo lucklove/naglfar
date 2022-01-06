@@ -12,7 +12,7 @@ func newServerCommand() *cobra.Command {
 		RunE: func(cmd *cobra.Command, args []string) error {
 			s := server.New()
 
-			return s.Run(":2048")
+			return s.Run(":2049")
 		},
 	}
 
