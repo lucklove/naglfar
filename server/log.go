@@ -21,7 +21,7 @@ func (s *Server) logs(ctx context.Context, r *http.Request) (map[string]interfac
 	fragment := mux.Vars(r)["fid"]
 	event := mux.Vars(r)["eid"]
 
-	logs, err := s.client.GetLog(ctx, fragment, start, stop, event)
+	logs, err := s.client.GetLog(ctx, fragment, start, stop, nil, event)
 	if err != nil {
 		return nil, err
 	}

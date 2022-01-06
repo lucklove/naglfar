@@ -14,9 +14,11 @@ import (
 )
 
 func newImportCommand() *cobra.Command {
+	fragment := ""
+
 	cmd := &cobra.Command{
 		Use:   "import",
-		Short: "naglfar import <fragment>",
+		Short: "naglfar import <log-file> --as <fragment>",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if len(args) != 1 {
 				return cmd.Help()
@@ -26,7 +28,7 @@ func newImportCommand() *cobra.Command {
 			defer c.Close()
 
 			// get non-blocking write client
-			writeAPI, err := c.ImportFragment(cmd.Context(), args[0])
+			writeAPI, err := c.ImportFragment(cmd.Context(), fragment)
 			if err != nil {
 				return err
 			}
@@ -34,7 +36,13 @@ func newImportCommand() *cobra.Command {
 				panic(batch)
 			})
 
-			parser := parser.NewStreamParser(os.Stdin)
+			file, err := os.Open(args[0])
+			if err != nil {
+				return err
+			}
+			defer file.Close()
+
+			parser := parser.NewStreamParser(file)
 			em, err := event.NewEventManager(event.ComponentTiDB)
 			if err != nil {
 				return err
@@ -72,6 +80,9 @@ func newImportCommand() *cobra.Command {
 			return nil
 		},
 	}
+
+	cmd.Flags().StringVarP(&fragment, "as", "", "", "Specify the fragment name")
+	cmd.MarkFlagRequired("as")
 
 	return cmd
 }

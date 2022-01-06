@@ -28,6 +28,7 @@ func (c *Client) GetFieldTrend(ctx context.Context, frag string, start, stop tim
 	tr, err := queryAPI.Query(ctx, fmt.Sprintf(`
 		from(bucket: "%s")
 			|> range(start: %s, stop: %s) %s
+			|> filter(fn: (r) => r["_measurement"] =~ /[0-9]{5}/) 
 			|> group(columns: ["%s"])
 			|> window(every: 5m)
 			|> sum()
@@ -73,6 +74,7 @@ func (c *Client) GetTrend(ctx context.Context, frag string, start, stop time.Tim
 	tr, err := queryAPI.Query(ctx, fmt.Sprintf(`
 		from(bucket: "%s")
 			|> range(start: %s, stop: %s) %s
+			|> filter(fn: (r) => r["_measurement"] =~ /[0-9]{5}/) 
 			|> group(columns: ["_measurement", "name"])
 			|> window(every: 5m)
 			|> sum()
@@ -106,15 +108,4 @@ func (c *Client) GetTrend(ctx context.Context, frag string, start, stop time.Tim
 		ts = append(ts, t)
 	}
 	return ts, tr.Err()
-}
-
-func buildEventFilter(events []string) string {
-	if len(events) == 0 {
-		return ""
-	}
-	xs := []string{}
-	for _, event := range events {
-		xs = append(xs, fmt.Sprintf(`r["_measurement"] == "%s"`, event))
-	}
-	return fmt.Sprintf(`|> filter(fn: (r) => %s)`, strings.Join(xs, "or"))
 }

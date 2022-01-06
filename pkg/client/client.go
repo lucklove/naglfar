@@ -69,7 +69,23 @@ func (c *Client) ImportFragment(ctx context.Context, frag string) (api.WriteAPI,
 	return c.client.WriteAPI(c.orgName, frag), nil
 }
 
-func (c *Client) GetFieldStats(ctx context.Context, frag string, start, stop time.Time, event, field string) (map[string]int64, error) {
+func (c *Client) DeleteFragment(ctx context.Context, frag string) error {
+	bucketAPI := c.client.BucketsAPI()
+
+	buckets, err := bucketAPI.GetBuckets(ctx)
+	if err != nil {
+		return err
+	}
+
+	for _, bucket := range *buckets {
+		if frag == bucket.Name {
+			return bucketAPI.DeleteBucket(ctx, &bucket)
+		}
+	}
+	return nil
+}
+
+func (c *Client) GetFieldStats(ctx context.Context, frag string, start, stop time.Time, filters []string, event, field string) (map[string]int64, error) {
 	queryAPI := c.client.QueryAPI(c.orgID)
 
 	if !strings.HasPrefix(field, "f_") {
@@ -78,10 +94,11 @@ func (c *Client) GetFieldStats(ctx context.Context, frag string, start, stop tim
 
 	tr, err := queryAPI.Query(ctx, fmt.Sprintf(`
 		from(bucket: "%s")
-			|> range(start: %s, stop: %s) %s
+			|> range(start: %s, stop: %s) %s %s
+			|> filter(fn: (r) => r["_measurement"] =~ /[0-9]{5}/) 
 			|> group(columns: ["%s"])
 			|> sum()
-	`, frag, start.Format(time.RFC3339), stop.Format(time.RFC3339), buildEventFilter([]string{event}), field))
+	`, frag, start.Format(time.RFC3339), stop.Format(time.RFC3339), buildEventFilter([]string{event}), buildFieldFilter(filters), field))
 	if err != nil {
 		return nil, err
 	}
@@ -105,6 +122,7 @@ func (c *Client) GetStats(ctx context.Context, frag string, start, stop time.Tim
 	tr, err := queryAPI.Query(ctx, fmt.Sprintf(`
 		from(bucket: "%s")
 			|> range(start: %s, stop: %s)
+			|> filter(fn: (r) => r["_measurement"] =~ /[0-9]{5}/) 
 			|> group(columns: ["_measurement", "name"])
 			|> sum()
 	`, frag, start.Format(time.RFC3339), stop.Format(time.RFC3339)))
@@ -117,8 +135,16 @@ func (c *Client) GetStats(ctx context.Context, frag string, start, stop time.Tim
 	messageMap := map[string]string{}
 	for tr.Next() {
 		rec := tr.Record()
-		countMap[rec.Measurement()] = countMap[rec.Measurement()] + rec.Value().(int64)
-		messageMap[rec.Measurement()] = rec.Values()["name"].(string)
+		if name, ok := rec.Values()["name"].(string); ok {
+			messageMap[rec.Measurement()] = name
+		} else {
+			continue
+		}
+		if cnt, ok := rec.Value().(int64); ok {
+			countMap[rec.Measurement()] = countMap[rec.Measurement()] + cnt
+		} else if cnt, ok := rec.Value().(float64); ok {
+			countMap[rec.Measurement()] = int64(float64(countMap[rec.Measurement()]) + cnt)
+		}
 	}
 	return countMap, messageMap, tr.Err()
 }
@@ -136,6 +162,7 @@ func (c *Client) Search(ctx context.Context, event string, start, stop time.Time
 		tr, err := queryAPI.Query(ctx, fmt.Sprintf(`
 			from(bucket: "%s")
 				|> range(start: %s, stop: %s)
+				|> filter(fn: (r) => r["_measurement"] =~ /[0-9]{5}/) 
 				|> filter(fn: (r) => r._measurement == "%s")
 				|> group(columns: ["_measurement"])
 				|> limit(n: 1)

@@ -22,6 +22,7 @@ func Command() *cobra.Command {
 		newLogCommand(),
 		newFieldStatsCommand(),
 		newServerCommand(),
+		newDeleteCommand(),
 	)
 
 	return cmd

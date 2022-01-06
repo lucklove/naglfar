@@ -9,13 +9,14 @@ import (
 	"github.com/lucklove/tidb-log-parser/parser"
 )
 
-func (c *Client) GetLog(ctx context.Context, frag string, start, stop time.Time, events ...string) ([]parser.LogEntry, error) {
+func (c *Client) GetLog(ctx context.Context, frag string, start, stop time.Time, filters []string, events ...string) ([]parser.LogEntry, error) {
 	queryAPI := c.client.QueryAPI(c.orgID)
-
 	tr, err := queryAPI.Query(ctx, fmt.Sprintf(`
 		from(bucket: "%s")
-			|> range(start: %s, stop: %s) %s
-	`, frag, start.Format(time.RFC3339), stop.Format(time.RFC3339), buildEventFilter(events)))
+			|> range(start: %s, stop: %s) 
+			|> filter(fn: (r) => r["_measurement"] =~ /[0-9]{5}/) 
+			%s %s
+	`, frag, start.Format(time.RFC3339), stop.Format(time.RFC3339), buildEventFilter(events), buildFieldFilter(filters)))
 	if err != nil {
 		return nil, err
 	}

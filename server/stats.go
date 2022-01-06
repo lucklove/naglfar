@@ -27,7 +27,7 @@ func (s *Server) fieldStats(ctx context.Context, r *http.Request) (map[string]in
 	event := mux.Vars(r)["eid"]
 	field := mux.Vars(r)["field"]
 
-	return s.client.GetFieldStats(ctx, fragment, start, stop, event, field)
+	return s.client.GetFieldStats(ctx, fragment, start, stop, nil, event, field)
 }
 
 func (s *Server) stats(ctx context.Context, r *http.Request) ([]map[string]interface{}, error) {

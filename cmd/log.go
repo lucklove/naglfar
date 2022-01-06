@@ -2,16 +2,20 @@ package cmd
 
 import (
 	"fmt"
+	"sort"
 	"strings"
 	"time"
 
 	"github.com/lucklove/naglfar/pkg/client"
+	"github.com/lucklove/tidb-log-parser/event"
 	"github.com/lucklove/tidb-log-parser/parser"
-	"github.com/lucklove/tidb-log-parser/utils"
+	"github.com/pingcap/tiup/pkg/tui"
 	"github.com/spf13/cobra"
 )
 
 func newLogCommand() *cobra.Command {
+	filters := []string{}
+
 	cmd := &cobra.Command{
 		Use:   "log",
 		Short: "naglfar log <fragment> [events]",
@@ -24,33 +28,42 @@ func newLogCommand() *cobra.Command {
 			defer c.Close()
 
 			now := time.Now()
-			logs, err := c.GetLog(cmd.Context(), args[0], now.Add(-time.Hour*24*30), now, args[1:]...)
+			logs, err := c.GetLog(cmd.Context(), args[0], now.Add(-time.Hour*24*30), now, filters, args[1:]...)
 			if err != nil {
 				return err
 			}
 
-			stats := make(map[string]utils.StringSet)
+			em, err := event.NewEventManager(event.ComponentTiDB)
+			if err != nil {
+				return err
+			}
+
+			table := [][]string{{"ID", "time", "level", "message", "fields"}}
 			for _, log := range logs {
-				for _, f := range log.Fields {
-					if stats[f.Name] == nil {
-						stats[f.Name] = utils.NewStringSet()
-					}
-					stats[f.Name].Insert(f.Value)
-				}
+				table = append(table, []string{
+					fmt.Sprintf("%d", em.GetLogEventID(&log)),
+					log.Header.DateTime.Format(time.RFC3339),
+					string(log.Header.Level),
+					log.Message,
+					fields(log.Fields),
+				})
 			}
-			for k, s := range stats {
-				fmt.Printf("%s=%d\n", k, len(s))
-			}
+			tui.PrintTable(table, true)
 
 			return nil
 		},
 	}
+
+	cmd.Flags().StringSliceVarP(&filters, "filter", "f", nil, "filter fields values")
 
 	return cmd
 }
 
 func fields(fs []parser.LogField) string {
 	xs := []string{}
+	sort.Slice(fs, func(i, j int) bool {
+		return fs[i].Name < fs[j].Name
+	})
 	for _, f := range fs {
 		xs = append(xs, fmt.Sprintf("%s=%s", f.Name, f.Value))
 	}
