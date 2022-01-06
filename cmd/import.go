@@ -70,6 +70,9 @@ func newImportCommand() *cobra.Command {
 					AddField("count", 1).
 					SetTime(log.Header.DateTime.Add(time.Nanosecond * time.Duration(cnt)))
 				for _, f := range log.Fields {
+					if f.Value == "" {
+						f.Value = "<nil>"
+					}
 					p = p.AddTag("f_"+f.Name, f.Value)
 				}
 				// write point asynchronously
