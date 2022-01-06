@@ -5,6 +5,7 @@ import (
 	"context"
 	"fmt"
 	"net/http"
+	"os"
 	"os/exec"
 	"time"
 
@@ -92,8 +93,10 @@ func (s *Server) buildChangePoint(ctx context.Context) {
 		}
 		cmd := exec.CommandContext(ctx, "/usr/bin/python3", "/root/logdeep/demo/SuddenChangeDetection.py")
 		cmd.Env = append(cmd.Env, "PYTHONPATH=/root/logdeep")
+		cmd.Dir = "/root/logdeep/demo"
 		cmd.Stdin = inbuf
 		cmd.Stdout = outbuf
+		cmd.Stderr = os.Stderr
 		if err := cmd.Run(); err != nil {
 			log.Error("error run command", zap.Error(err))
 			continue
