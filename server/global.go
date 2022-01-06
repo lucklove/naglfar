@@ -23,6 +23,7 @@ type GlobalStore struct {
 func NewGlobalStore() *GlobalStore {
 	return &GlobalStore{
 		ChangePoints: make(map[string]map[string][]TimeRange),
+		Threshold:    make(map[string]map[string]*ThresholdRange),
 	}
 }
 
