@@ -18,13 +18,47 @@ type GlobalStore struct {
 	mu           sync.Mutex
 	ChangePoints map[string]map[string][]TimeRange     `json:"change_points"`
 	Threshold    map[string]map[string]*ThresholdRange `json:"threshold"`
+	Similarity   map[string]map[string]float64
 }
 
 func NewGlobalStore() *GlobalStore {
 	return &GlobalStore{
 		ChangePoints: make(map[string]map[string][]TimeRange),
 		Threshold:    make(map[string]map[string]*ThresholdRange),
+		Similarity:   make(map[string]map[string]float64),
 	}
+}
+
+func (gs *GlobalStore) HasSimilarity(fragment string) bool {
+	gs.mu.Lock()
+	defer gs.mu.Unlock()
+
+	return len(gs.Similarity[fragment]) > 0
+}
+
+func (gs *GlobalStore) SetSimilarity(frag1, frag2 string, sim float64) {
+	gs.mu.Lock()
+	defer gs.mu.Unlock()
+
+	if gs.Similarity[frag1] == nil {
+		gs.Similarity[frag1] = make(map[string]float64)
+	}
+	if gs.Similarity[frag2] == nil {
+		gs.Similarity[frag2] = make(map[string]float64)
+	}
+
+	gs.Similarity[frag1][frag2] = sim
+	gs.Similarity[frag2][frag1] = sim
+}
+
+func (gs *GlobalStore) GetSimilarity(fragment string) map[string]float64 {
+	gs.mu.Lock()
+	defer gs.mu.Unlock()
+
+	if gs.Similarity[fragment] == nil {
+		gs.Similarity[fragment] = make(map[string]float64)
+	}
+	return gs.Similarity[fragment]
 }
 
 func (gs *GlobalStore) HasChangePoint(fragment string) bool {

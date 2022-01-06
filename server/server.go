@@ -8,12 +8,12 @@ import (
 	"net/http"
 	"os"
 	"os/exec"
+	"strings"
 	"time"
 
 	"github.com/gorilla/mux"
 	"github.com/lucklove/naglfar/pkg/client"
 	"github.com/lucklove/tidb-log-parser/event"
-	du "github.com/pingcap/diag/pkg/utils"
 	"github.com/pingcap/log"
 	"go.uber.org/zap"
 )
@@ -39,11 +39,18 @@ func (s *Server) Run(address string) error {
 		for {
 			s.buildChangePoint(context.TODO())
 			s.buildThreshold(context.TODO())
+			s.buildSimilarity(context.TODO())
 			time.Sleep(60 * time.Second)
 		}
 	}()
 
 	return http.ListenAndServe(address, s.router)
+}
+
+func (s *Server) similarity(ctx context.Context, r *http.Request) (map[string]float64, error) {
+	fragment := mux.Vars(r)["fid"]
+
+	return s.store.GetSimilarity(fragment), nil
 }
 
 func (s *Server) threshhold(ctx context.Context, r *http.Request) (*ThresholdRange, error) {
@@ -54,25 +61,83 @@ func (s *Server) threshhold(ctx context.Context, r *http.Request) (*ThresholdRan
 }
 
 func (s *Server) changePoints(ctx context.Context, r *http.Request) ([]TimeRange, error) {
-	start, err := du.ParseTime(mux.Vars(r)["start"])
-	if err != nil {
-		return nil, err
-	}
-	stop, err := du.ParseTime(mux.Vars(r)["stop"])
-	if err != nil {
-		return nil, err
-	}
 	fragment := mux.Vars(r)["fid"]
 	event := mux.Vars(r)["eid"]
 
-	xs := []TimeRange{}
-	for _, x := range s.store.GetChangePoint(fragment, event) {
-		if x.Start < start.Unix() || x.Stop > stop.Unix() {
+	return s.store.GetChangePoint(fragment, event), nil
+}
+
+func (s *Server) buildSimilarity(ctx context.Context) {
+	log.Info("build similarity")
+	frags, err := s.client.ListFragments(ctx)
+	if err != nil {
+		log.Error("list fragment failed", zap.Error(err))
+	}
+	if len(frags) < 2 {
+		log.Info("no enought fragments found")
+		return
+	}
+	em, err := event.NewEventManager(event.ComponentTiDB)
+	if err != nil {
+		return
+	}
+	for _, frag1 := range frags {
+		if s.store.HasSimilarity(frag1) {
+			log.Info("similarity existed, ignore", zap.String("fragment", frag1))
 			continue
 		}
-		xs = append(xs, x)
+		logs1, err := s.client.GetLog(ctx, frag1, time.Now().Add(-time.Hour*24*30), time.Now(), nil)
+		if err != nil {
+			continue
+		}
+		for _, frag2 := range frags {
+			if frag2 == frag1 {
+				continue
+			}
+			logs2, err := s.client.GetLog(ctx, frag2, time.Now().Add(-time.Hour*24*30), time.Now(), nil)
+			if err != nil {
+				continue
+			}
+			inbuf := bytes.NewBuffer(nil)
+			outbuf := bytes.NewBuffer(nil)
+			for _, log := range logs1 {
+				fmt.Fprintf(inbuf, "%d,%d\n", log.Header.DateTime.Unix(), em.GetLogEventID(&log))
+			}
+			fmt.Fprintf(inbuf, "\n")
+			for _, log := range logs2 {
+				fmt.Fprintf(inbuf, "%d,%d\n", log.Header.DateTime.Unix(), em.GetLogEventID(&log))
+			}
+			cmd := exec.CommandContext(ctx, "/usr/bin/python3", "/root/logdeep/demo/LogSimilarity.py")
+			cmd.Env = append(cmd.Env, "PYTHONPATH=/root/logdeep")
+			cmd.Stdin = inbuf
+			cmd.Stdout = outbuf
+			cmd.Stderr = os.Stderr
+			if err := cmd.Run(); err != nil {
+				log.Error("error run command", zap.Error(err))
+				continue
+			}
+
+			scanner := bufio.NewScanner(outbuf)
+			for scanner.Scan() {
+				line := scanner.Text()
+				if !strings.Contains(line, "word2vec") {
+					continue
+				}
+				xs := strings.Split(line, ":")
+				if len(xs) != 2 {
+					continue
+				}
+				var sim float64
+				fmt.Sscanf(xs[1], "%f", &sim)
+				s.store.SetSimilarity(frag1, frag2, sim)
+			}
+			if err := scanner.Err(); err != nil {
+				log.Error("scan error", zap.Error(err))
+			} else {
+				log.Info("build similarity success", zap.String("fragment", frag1))
+			}
+		}
 	}
-	return xs, nil
 }
 
 func (s *Server) buildThreshold(ctx context.Context) {
