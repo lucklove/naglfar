@@ -1,6 +1,7 @@
 package server
 
 import (
+	"bufio"
 	"bytes"
 	"context"
 	"fmt"
@@ -100,13 +101,13 @@ func (s *Server) buildChangePoint(ctx context.Context) {
 			log.Error("error run command", zap.Error(err))
 			continue
 		}
-		for {
-			var eid string
-			var start, stop int64
-			if _, err := fmt.Fscanf(outbuf, "%s,%d,%d", &eid, &start, &stop); err != nil {
-				break
+		scanner := bufio.NewScanner(outbuf)
+		for scanner.Scan() {
+			var eid, start, stop int64
+			if _, err := fmt.Sscanf(scanner.Text(), "%d,%d,%d", &eid, &start, &stop); err != nil {
+				continue
 			}
-			s.store.SetChangePoint(frag, eid, TimeRange{Start: time.Unix(start, 0), Stop: time.Unix(stop, 0)})
+			s.store.SetChangePoint(frag, fmt.Sprintf("%d", eid), TimeRange{Start: time.Unix(start, 0), Stop: time.Unix(stop, 0)})
 		}
 		log.Info("build change point success", zap.String("fragment", frag))
 	}
