@@ -43,9 +43,6 @@ func newLogCommand() *cobra.Command {
 			if err != nil {
 				return err
 			}
-			sort.Slice(logs, func(i, j int) bool {
-				return logs[i].Header.DateTime.Before(logs[j].Header.DateTime)
-			})
 
 			em, err := event.NewEventManager(event.ComponentTiDB)
 			if err != nil {

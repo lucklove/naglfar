@@ -3,6 +3,7 @@ package client
 import (
 	"context"
 	"fmt"
+	"sort"
 	"strings"
 	"time"
 
@@ -43,6 +44,10 @@ func (c *Client) GetLog(ctx context.Context, frag string, start, stop time.Time,
 		}
 		logs = append(logs, log)
 	}
+
+	sort.Slice(logs, func(i, j int) bool {
+		return logs[i].Header.DateTime.Before(logs[j].Header.DateTime)
+	})
 
 	return logs, nil
 }
