@@ -335,7 +335,7 @@ curl ${server_address}/api/v1/fragments/{fid}/logs/similarity
 ## 获取特定日志的正常上下界
 
 ```
-curl ${server_address}/api/v1/fragments/{fid}/events/{eid}/logs/threshhold
+curl ${server_address}/api/v1/fragments/{fid}/events/{eid}/logs/threshold
 ```
 
 - fid: fragment id，唯一代表一份日志
