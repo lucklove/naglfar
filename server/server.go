@@ -82,7 +82,7 @@ func (s *Server) buildSimilarity(ctx context.Context) {
 		return
 	}
 	for _, frag1 := range frags {
-		if s.store.HasSimilarity(frag1) {
+		if len(s.store.GetSimilarity(frag1)) == len(frags)-1 {
 			log.Info("similarity existed, ignore", zap.String("fragment", frag1))
 			continue
 		}
@@ -177,7 +177,7 @@ func (s *Server) buildThreshold(ctx context.Context) {
 		scanner := bufio.NewScanner(outbuf)
 		for scanner.Scan() {
 			var eid, top, bottom int64
-			if _, err := fmt.Sscanf(scanner.Text(), "%d,%d,%d", &eid, &top, &bottom); err != nil {
+			if _, err := fmt.Sscanf(scanner.Text(), "%d,%d,%d", &eid, &bottom, &top); err != nil {
 				continue
 			}
 			s.store.SetThreshold(frag, fmt.Sprintf("%d", eid), &ThresholdRange{Top: top, Bottom: bottom})

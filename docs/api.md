@@ -315,3 +315,49 @@ curl ${server_address}/api/v1/{start}/{stop}/fragments/{fid}/events/{eid}/fields
 	}]
 }]
 ```
+
+## 获取一个日志片段和其他片段的相似度
+
+
+```
+curl ${server_address}/api/v1/fragments/{fid}/logs/similarity
+```
+
+- fid: fragment id，唯一代表一份日志
+
+
+返回示例:
+
+```json
+{"tidb-3":0.3698447346687317,"tidb-7":0.8179337382316589}
+```
+
+## 获取特定日志的正常上下界
+
+```
+curl ${server_address}/api/v1/fragments/{fid}/events/{eid}/logs/threshhold
+```
+
+- fid: fragment id，唯一代表一份日志
+- eid: event id，一个 event 代表一类日志
+
+返回示例:
+
+```json
+{"top":23897,"bottom":1}
+```
+
+## 获取特定日志的异常范围
+
+```
+curl ${server_address}/api/v1/fragments/{fid}/events/{eid}/logs/changepoints
+```
+
+- fid: fragment id，唯一代表一份日志
+- eid: event id，一个 event 代表一类日志
+
+返回示例:
+
+```json
+[{"start":1641177903,"stop":1641180011},{"start":1641176086,"stop":1641179409},{"start":1641182147,"stop":1641183961}]
+```
