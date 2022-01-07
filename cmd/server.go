@@ -7,10 +7,14 @@ import (
 
 func newServerCommand() *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "server",
+		Use:   "server <web-root>",
 		Short: "bootstrap server",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			s := server.New()
+			if len(args) != 1 {
+				return cmd.Help()
+			}
+
+			s := server.New(args[0])
 
 			return s.Run(":2048")
 		},

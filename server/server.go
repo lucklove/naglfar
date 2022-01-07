@@ -19,30 +19,33 @@ import (
 )
 
 type Server struct {
-	router http.Handler
-	client *client.Client
-	store  *GlobalStore
+	router  http.Handler
+	client  *client.Client
+	store   *GlobalStore
+	webRoot string
 }
 
-func New() *Server {
+func New(webRoot string) *Server {
 	s := &Server{
-		client: client.New(),
-		store:  NewGlobalStore(),
+		client:  client.New(),
+		store:   NewGlobalStore(),
+		webRoot: webRoot,
 	}
 	s.router = router(s)
 	return s
 }
 
 func (s *Server) Run(address string) error {
-	// do some magic
-	go func() {
-		for {
-			s.buildChangePoint(context.TODO())
-			s.buildThreshold(context.TODO())
-			s.buildSimilarity(context.TODO())
-			time.Sleep(60 * time.Second)
-		}
-	}()
+	if strings.HasPrefix(s.webRoot, "/root") {
+		go func() {
+			for {
+				s.buildChangePoint(context.TODO())
+				s.buildThreshold(context.TODO())
+				s.buildSimilarity(context.TODO())
+				time.Sleep(60 * time.Second)
+			}
+		}()
+	}
 
 	return http.ListenAndServe(address, s.router)
 }

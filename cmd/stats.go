@@ -141,6 +141,7 @@ func newStatsCommand() *cobra.Command {
 				return err
 			}
 			eids := []string{}
+			fcountMap := map[string]uint{}
 			for eid, cnt := range countMap {
 				eids = append(eids, eid)
 				id, err := strconv.Atoi(eid)
@@ -151,6 +152,7 @@ func newStatsCommand() *cobra.Command {
 				if err != nil {
 					return err
 				}
+				fcountMap[eid] = ec
 				wm[eid] = float64(cnt) / float64(count) * math.Log(float64(lfc)/float64(ec+1))
 			}
 
@@ -158,7 +160,7 @@ func newStatsCommand() *cobra.Command {
 				return wm[eids[i]] > wm[eids[j]]
 			})
 
-			header := []string{"ID", "weight", "count", "template"}
+			header := []string{"ID", "frequency", "count", "template"}
 			if withFields {
 				header = append(header, "fields")
 			}
@@ -166,7 +168,7 @@ func newStatsCommand() *cobra.Command {
 			for _, eid := range eids {
 				row := []string{
 					eid,
-					fmt.Sprintf("%f", wm[eid]),
+					fmt.Sprintf("%d/%d", fcountMap[eid], lfc),
 					fmt.Sprintf("%d", countMap[eid]),
 					messageMap[eid],
 				}
